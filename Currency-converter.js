@@ -172,12 +172,14 @@ const currencyNames = {
 
 // Fetch the list of currencies
 // https://v6.exchangerate-api.com/v6/bd172210e4f99a824979c437/latest/USD
+
+// Fetch the list of currencies
 fetch(`https://open.er-api.com/v6/latest/USD`)
     .then(response => response.json())
     .then(data => {
         const currencies = Object.keys(data.rates);
         populateCurrencyDropdown(currencies);
-    }); 
+    });
 
 // Populate the dropdowns with currency options
 function populateCurrencyDropdown(currencies) {
@@ -202,16 +204,37 @@ function populateCurrencyDropdown(currencies) {
 convertBtn.addEventListener('click', () => {
     const from = fromCurrency.value;
     const to = toCurrency.value;
-    const amountValue = amount.value;
+    const amountValue = parseFloat(amount.value);
 
-    fetch(`https://open.er-api.com/v6/latest/${from}`)
+    if (isNaN(amountValue) || amountValue <= 0) {
+        result.innerHTML = 'Please enter a valid amount!';
+        return;
+    }
+
+    fetch(`https://open.er-api.com/v6/latest/USD`)
         .then(response => response.json())
         .then(data => {
-            const rate = data.rates[to];
-            const convertedAmount = (amountValue * rate).toFixed(2);
-            result.innerHTML = `${amountValue} ${from} = ${convertedAmount} ${to}`;
+            const rates = data.rates;
+
+            // Conversion logic: from → USD → to
+            if (from === to) {
+                result.innerHTML = `1 ${from} equals 1 ${to}. No conversion needed!`;
+                return;
+            }
+
+            const fromRate = rates[from];
+            const toRate = rates[to];
+
+            if (fromRate && toRate) {
+                // Convert amount from "from" currency to "to" currency
+                const convertedAmount = ((amountValue / fromRate) * toRate).toFixed(2);
+                result.innerHTML = `${amountValue} ${from} = ${convertedAmount} ${to}`;
+            } else {
+                result.innerHTML = 'Error: One of the selected currencies is not supported.';
+            }
         })
-        .catch(error => {
-            result.innerHTML = 'Error fetching data!';
+        .catch(() => {
+            result.innerHTML = 'Error fetching exchange rate data!';
         });
 });
+
